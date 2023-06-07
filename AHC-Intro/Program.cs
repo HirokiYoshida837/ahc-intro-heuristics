@@ -53,17 +53,31 @@ namespace AHC_Intro
         /// <returns></returns>
         public static int[] Solve(Input input)
         {
-            var array = Enumerable.Range(0, input.d)
-                .Select(x => (x % 26) + 1)
-                .ToArray();
+
+            var ansList = new List<int>();
+            
+            for (var i = 0; i < input.s.Length; i++)
+            {
+                var valueTuple = input.s[i].Select((item,index) => (item,index))
+                    .OrderByDescending(x=>x.item)
+                    .First();
+
+                ansList.Add(valueTuple.index + 1);
+            }
+            
+            
+            // var ansList = Enumerable.Range(0, input.d)
+            //     .Select(x => (x % 26) + 1)
+            //     .ToArray();
+            //
 
             // 返却前に一応値チェックしておく。
-            if (array.Any(x => (x < 0 || 26 < x)))
+            if (ansList.Any(x => (x < 0 || 26 < x)))
             {
                 throw new Exception("contest type error.");
             }
 
-            return array;
+            return ansList.ToArray();
         }
 
         public struct Input
@@ -143,7 +157,8 @@ namespace AHC_Intro
 
             Debug.WriteLine($"[DEBUG] ### Last Score : {lastSum} ### ");
 
-            return lastSum;
+            // 返却するのは、0かlastSumか
+            return Math.Max(0, lastSum);
         }
 
 
