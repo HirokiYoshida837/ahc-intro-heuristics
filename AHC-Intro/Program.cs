@@ -53,28 +53,67 @@ namespace AHC_Intro
         /// <returns></returns>
         public static int[] Solve(Input input)
         {
-
             var ansList = new List<int>();
-            
+
+            // 1日目からd日目まで、計算
+            var scoreHistory = Enumerable.Range(0, input.d)
+                .Select(_ => new long[26])
+                .ToArray();
+
+            var lastHeldDate = Enumerable.Range(0, 26)
+                .Select(_ => -1)
+                .ToArray();
+
             for (var i = 0; i < input.s.Length; i++)
             {
-                var valueTuple = input.s[i].Select((item,index) => (item,index))
-                    .OrderByDescending(x=>x.item)
-                    .First();
+                // 今日のスコアの元
 
-                ansList.Add(valueTuple.index + 1);
+                var todayScoreBase = lastHeldDate
+                    .Select((item, index) => (item, index))
+                    .Select(x => (i - x.item, x.index))
+                    .Select(x => -1 * x.Item1 * input.c[x.index])
+                    .ToArray();
+
+                var todaySum = todayScoreBase.Sum();
+                var todayS = input.s[i];
+
+                var maxScore = long.MinValue;
+                var selectedType = 0;
+
+                // Greedyにやる。26種類それぞれためして、一番スコアが高くなる種別を選ぶ。
+                for (int j = 0; j < 26; j++)
+                {
+                    var v = todaySum + (-1 * todayScoreBase[j]);
+                    v += todayS[j];
+
+                    if (maxScore <= v)
+                    {
+                        selectedType = j;
+                        maxScore = v;
+                    }
+                }
+                
+                // その日選んだものを保存。
+                ansList.Add(selectedType);
+                
+                // 最後の開催日データを更新
+                lastHeldDate[selectedType] = i;
             }
             
-            
-            // var ansList = Enumerable.Range(0, input.d)
-            //     .Select(x => (x % 26) + 1)
-            //     .ToArray();
-            //
+            // ansListを1-indexedな日付に変更
+
+            ansList = ansList.Select(x => x + 1).ToList();
+
 
             // 返却前に一応値チェックしておく。
-            if (ansList.Any(x => (x < 0 || 26 < x)))
+            if (ansList.Any(x => (x < 1 || 26 < x)))
             {
                 throw new Exception("contest type error.");
+            }
+
+            if (ansList.Count != input.d)
+            {
+                throw new Exception("anser length error.");
             }
 
             return ansList.ToArray();
@@ -156,6 +195,7 @@ namespace AHC_Intro
 
 
             Debug.WriteLine($"[DEBUG] ### Last Score : {lastSum} ### ");
+            Console.WriteLine($"[DEBUG] ### Last Score : {lastSum} ### ");
 
             // 返却するのは、0かlastSumか
             return Math.Max(0, lastSum);
