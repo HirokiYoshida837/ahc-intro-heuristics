@@ -20,6 +20,11 @@ namespace AHC_Intro
 
         public static void Main(string[] args)
         {
+            if (IS_DEBUG_ENABLED)
+            {
+                Console.WriteLine("### [WARNING] DEBUG MODE IS ENABLE!! ###");
+            }
+
             // Read Input
             var d = ReadValue<int>();
             var cList = ReadList<long>().ToArray();
@@ -29,23 +34,25 @@ namespace AHC_Intro
 
             var input = new Input(d, cList, sList);
 
-            // var outputList = new SimpleGreedySolver().Solve(input);
-            var outputList = new EditorialGreedySolver().Solve(input);
+            // solve
+            var solvedResult = Solve(input, new EditorialGreedySolver(10));
 
-            // var outputList = Enumerable.Range(0, d)
-            //     .Select(_ => ReadValue<int>())
-            //     .ToArray();
-
-            foreach (var item in outputList)
-            {
-                Console.WriteLine(item);
-            }
+            // 出力
+            solvedResult.AnswerWrite();
 
             if (IS_DEBUG_ENABLED)
             {
-                var sum = CalculateScoreSum(input, outputList);
+                Console.WriteLine($"[DEBUG] ### Last Score : {solvedResult.lastScore} ### ");
             }
         }
+
+        // 外部からInjectしてテストできるようにする。
+        public static Response Solve(Input input, ISolver solver)
+        {
+            var response = solver.Solve(input);
+            return response;
+        }
+
 
         /// <summary>
         /// 答えとして出力する、コンテスト開催タイプ(1-indexed)のリストを返却します。
@@ -54,7 +61,7 @@ namespace AHC_Intro
         /// <returns></returns>
         public interface ISolver
         {
-            int[] Solve(Input input);
+            Response Solve(Input input);
         }
 
         public static void ValidateAnsArray(Input input, int[] ansList)
@@ -67,13 +74,20 @@ namespace AHC_Intro
 
             if (ansList.Length != input.d)
             {
-                throw new Exception("anser length error.");
+                throw new Exception("answer length error.");
             }
         }
 
         public class EditorialGreedySolver : ISolver
         {
-            public int[] Solve(Input input)
+            private readonly int duration;
+
+            public EditorialGreedySolver(int k)
+            {
+                this.duration = k;
+            }
+
+            public Response Solve(Input input)
             {
                 var ansList = new List<int>();
 
@@ -86,7 +100,7 @@ namespace AHC_Intro
                     {
                         ansList.Add(type);
 
-                        var score = CalculateScoreSum(input, ansList.Select(x => x + 1).ToArray());
+                        var score = evaluate(input, ansList.Select(x => x + 1).ToArray(), duration);
 
                         if (currentMaxScore < score)
                         {
@@ -102,16 +116,55 @@ namespace AHC_Intro
 
 
                 var ret = ansList.Select(x => x + 1).ToArray();
-
                 ValidateAnsArray(input, ret);
-                return ret;
+
+                return new Response
+                {
+                    answerList = ret,
+                    lastScore = CalculateScoreSum(input, ret)
+                };
+            }
+
+            // 評価関数
+            private long evaluate(Input input, int[] answerList, int k)
+            {
+                var score = 0L;
+
+                var ans = answerList.Select(x => x - 1).ToArray();
+
+                // 最後に開催された日付け。随時更新。
+                var contestLastHeld = Enumerable.Range(0, 26).Select(_ => -1).ToArray();
+
+                for (var d = 0; d < ans.Length; d++)
+                {
+                    // Console.WriteLine(d);
+                    contestLastHeld[ans[d]] = d;
+
+                    for (int i = 0; i < 26; i++)
+                    {
+                        score -= input.c[i] * (d - contestLastHeld[i]);
+                    }
+
+                    score += input.s[d][ans[d]];
+                }
+
+                // k回後まで他になにもコンテストが開催されないと仮定してスコア計算してみる。
+                for (int d = ans.Length; d < Math.Min(ans.Length + k, input.d); d++)
+                {
+                    for (int i = 0; i < 26; i++)
+                    {
+                        score -= input.c[i] * (d - contestLastHeld[i]);
+                    }
+                }
+
+                return score;
             }
         }
 
 
         public class SimpleGreedySolver : ISolver
         {
-            public int[] Solve(Input input)
+            public Response Solve(Input input)
             {
                 var ansList = new List<int>();
 
@@ -176,7 +229,12 @@ namespace AHC_Intro
                     throw new Exception("anser length error.");
                 }
 
-                return ansList.ToArray();
+
+                return new Response
+                {
+                    answerList = ansList.ToArray(),
+                    lastScore = CalculateScoreSum(input, ansList.ToArray())
+                };
             }
         }
 
@@ -199,6 +257,21 @@ namespace AHC_Intro
             }
         }
 
+        public struct Response
+        {
+            public int[] answerList;
+            public long lastScore;
+
+            public void AnswerWrite()
+            {
+                foreach (var i in answerList)
+                {
+                    Console.WriteLine(i);
+                }
+            }
+        }
+
+
         public static long CalculateScoreSum(Input input, int[] answerList)
         {
             // 扱いやすいように0-indexな日付に変更
@@ -208,7 +281,7 @@ namespace AHC_Intro
             var contestLastHeld = Enumerable.Range(0, 26).Select(_ => -1).ToArray();
 
             var currentScore = 0L;
-            
+
             for (int days = 0; days < answerList.Length; days++)
             {
                 var contestType = contestHistoryAns[days];
@@ -220,10 +293,10 @@ namespace AHC_Intro
                 }
 
                 currentScore += input.s[days][contestType];
-
             }
 
-            Debug.WriteLine($"[DEBUG] ### Last Score : {currentScore} ### ");
+            // Debug.WriteLine($"[DEBUG] ### Last Score : {currentScore} ### ");
+            // Console.WriteLine($"[DEBUG] ### Last Score : {currentScore} ### ");
             return currentScore;
         }
 
