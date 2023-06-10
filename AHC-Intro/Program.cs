@@ -36,9 +36,7 @@ namespace AHC_Intro
 
             var input = new Input {d = d, c = cList, s = sList};
 
-            // solve
-            // var solvedResult = SolveProblem(input, new EditorialGreedySolver(10));
-            var solvedResult = SolveProblem(input, new RandomSolver());
+            var solvedResult = SolveProblem(input);
 
             // 出力
             solvedResult.AnswerWrite();
@@ -48,13 +46,25 @@ namespace AHC_Intro
                 Console.WriteLine($"[DEBUG] ### Last Score : {solvedResult.lastScore} ### ");
             }
         }
+        
+        // 外部からInjectしてテストできるようにする。
+        public static Response SolveProblem(Input input)
+        {
+            return SolveProblem(input, GetDefaultSolver());
+        }
 
         // 外部からInjectしてテストできるようにする。
         public static Response SolveProblem(Input input, ISolver solver)
         {
-            var response = solver.Solve(input);
-            return response;
+            return solver.Solve(input);
         }
+
+        // ここを変える。
+        public static ISolver GetDefaultSolver()
+        {
+            return new EditorialGreedySolver(10);
+        }
+        
 
 
         // public class SimpleGreedySolver : ISolver
@@ -260,6 +270,9 @@ namespace AHC_Intro
 
                     // Debug.WriteLine($"[DEBUG] ### Last Score : {currentScore} ### ");
                     // Console.WriteLine($"[DEBUG] ### Last Score : {currentScore} ### ");
+
+                    return Math.Max(1000000 + currentScore, 0);
+                    
                     return currentScore;
                 }
             }
