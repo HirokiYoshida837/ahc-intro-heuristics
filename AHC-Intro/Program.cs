@@ -46,7 +46,7 @@ namespace AHC_Intro
                 Console.WriteLine($"[DEBUG] ### Last Score : {solvedResult.lastScore} ### ");
             }
         }
-        
+
         // 外部からInjectしてテストできるようにする。
         public static Response SolveProblem(Input input)
         {
@@ -62,9 +62,9 @@ namespace AHC_Intro
         // ここを変える。
         public static ISolver GetDefaultSolver()
         {
-            return new EditorialGreedySolver(10);
+            // return new EditorialGreedySolver(10);
+            return new EditorialClimbingSolver();
         }
-        
 
 
         // public class SimpleGreedySolver : ISolver
@@ -272,8 +272,66 @@ namespace AHC_Intro
                     // Console.WriteLine($"[DEBUG] ### Last Score : {currentScore} ### ");
 
                     return Math.Max(1000000 + currentScore, 0);
-                    
-                    return currentScore;
+                }
+            }
+
+
+            /// <summary>
+            /// 山登り法
+            /// </summary>
+            public class EditorialClimbingSolver : ISolver
+            {
+                public Response Solve(Input input)
+                {
+                    // タイマー 1.8 秒
+                    var start = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                    var timeLimit = 1800L;
+
+                    var randomGenerator = new Random(Seed: 10);
+
+                    // 各日に開催するコンテストをGreedyで先にきめてしまう。
+                    var editorialGreedySolver = new EditorialGreedySolver(10);
+                    var response = editorialGreedySolver.Solve(input);
+                    var array = response.answerList.Select(x => x - 1).ToArray();
+
+
+                    // var array = Enumerable.Range(0, input.d).Select(x => randomGenerator.Next(0, 26)).ToArray();
+
+                    var currentScore = Utils.CalculateScoreSum(input, array.Select(x => x + 1).ToArray());
+
+                    // startから1.8秒までの間、探索し続ける。
+                    while (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() < start + 1800)
+                    {
+                        // 変更する日と、どこに変更するかをランダムにやる。
+                        var d = randomGenerator.Next(0, input.d);
+                        var q = randomGenerator.Next(0, 26);
+
+                        // d日目を qに変更してみる
+                        var old = array[d];
+                        array[d] = q;
+
+                        var newScore = Utils.CalculateScoreSum(input, array.Select(x => x + 1).ToArray());
+
+                        if (newScore > currentScore)
+                        {
+                            currentScore = newScore;
+                        }
+                        else
+                        {
+                            // 上がらなかったら戻す。
+                            array[d] = old;
+                        }
+                    }
+
+
+                    var ret = array.Select(x => x + 1).ToArray();
+                    Utils.ValidateAnsArray(input, ret);
+
+                    return new Response
+                    {
+                        answerList = ret,
+                        lastScore = Utils.CalculateScoreSum(input, ret)
+                    };
                 }
             }
 
