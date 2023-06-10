@@ -293,8 +293,6 @@ namespace AHC_Intro
                     var editorialGreedySolver = new EditorialGreedySolver(10);
                     var response = editorialGreedySolver.Solve(input);
                     var array = response.answerList.Select(x => x - 1).ToArray();
-
-
                     // var array = Enumerable.Range(0, input.d).Select(x => randomGenerator.Next(0, 26)).ToArray();
 
                     var currentScore = Utils.CalculateScoreSum(input, array.Select(x => x + 1).ToArray());
@@ -302,24 +300,88 @@ namespace AHC_Intro
                     // startから1.8秒までの間、探索し続ける。
                     while (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() < start + 1800)
                     {
-                        // 変更する日と、どこに変更するかをランダムにやる。
-                        var d = randomGenerator.Next(0, input.d);
-                        var q = randomGenerator.Next(0, 26);
-
-                        // d日目を qに変更してみる
-                        var old = array[d];
-                        array[d] = q;
-
-                        var newScore = Utils.CalculateScoreSum(input, array.Select(x => x + 1).ToArray());
-
-                        if (newScore > currentScore)
+                        var type = randomGenerator.NextDouble();
+                        if (type > 0.8)
                         {
-                            currentScore = newScore;
+                            // 変更する日と、どの種別に変更するかをランダムにやる。
+                            var d1 = randomGenerator.Next(0, input.d);
+
+                            var q1 = randomGenerator.Next(0, 26);
+                            var oldQ1 = array[d1];
+
+                            // d1を入れ替えてみる
+                            array[d1] = q1;
+
+                            var newScore = Utils.CalculateScoreSum(input, array.Select(x => x + 1).ToArray());
+
+                            if (newScore > currentScore)
+                            {
+                                currentScore = newScore;
+                            }
+                            else
+                            {
+                                // 上がらなかったら戻す。
+                                array[d1] = oldQ1;
+                            }
+                        }
+                        else if (type > 0.5)
+                        {
+                            // 変更する日と、どの種別に変更するかをランダムにやる。
+                            var d1 = randomGenerator.Next(0, input.d - 32);
+                            var oldQ1 = array[d1];
+
+                            // 2日選んで、その間でコンテストタイプを入れ替えてみる
+                            var d2 = randomGenerator.Next(d1 + 1, Math.Min((d1 + 16), input.d));
+                            var oldQ2 = array[d2];
+
+                            var d3 = randomGenerator.Next(d2 + 1, Math.Min((d2 + 16), input.d));
+                            var oldQ3 = array[d3];
+
+                            // d1とd2を入れ替えてみる
+                            array[d1] = oldQ3;
+                            array[d2] = oldQ1;
+                            array[d3] = oldQ2;
+
+                            var newScore = Utils.CalculateScoreSum(input, array.Select(x => x + 1).ToArray());
+
+                            if (newScore > currentScore)
+                            {
+                                currentScore = newScore;
+                            }
+                            else
+                            {
+                                // 上がらなかったら戻す。
+                                array[d1] = oldQ1;
+                                array[d2] = oldQ2;
+                                array[d3] = oldQ3;
+                            }
                         }
                         else
                         {
-                            // 上がらなかったら戻す。
-                            array[d] = old;
+                            // 変更する日と、どの種別に変更するかをランダムにやる。
+                            var d1 = randomGenerator.Next(0, input.d - 1);
+                            var oldQ1 = array[d1];
+
+                            // 2日選んで、その間でコンテストタイプを入れ替えてみる
+                            var d2 = randomGenerator.Next(d1 + 1, Math.Min((d1 + 16), input.d));
+                            var oldQ2 = array[d2];
+
+                            // d1とd2を入れ替えてみる
+                            array[d1] = oldQ2;
+                            array[d2] = oldQ1;
+
+                            var newScore = Utils.CalculateScoreSum(input, array.Select(x => x + 1).ToArray());
+
+                            if (newScore > currentScore)
+                            {
+                                currentScore = newScore;
+                            }
+                            else
+                            {
+                                // 上がらなかったら戻す。
+                                array[d1] = oldQ1;
+                                array[d2] = oldQ2;
+                            }
                         }
                     }
 
