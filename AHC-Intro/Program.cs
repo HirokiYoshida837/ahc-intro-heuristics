@@ -29,7 +29,8 @@ namespace AHC_Intro
 
             var input = new Input(d, cList, sList);
 
-            var outputList = Solve(input);
+            // var outputList = new SimpleGreedySolver().Solve(input);
+            var outputList = new EditorialGreedySolver().Solve(input);
 
             // var outputList = Enumerable.Range(0, d)
             //     .Select(_ => ReadValue<int>())
@@ -51,72 +52,132 @@ namespace AHC_Intro
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        public static int[] Solve(Input input)
+        public interface ISolver
         {
-            var ansList = new List<int>();
+            int[] Solve(Input input);
+        }
 
-            // 1日目からd日目まで、計算
-            var scoreHistory = Enumerable.Range(0, input.d)
-                .Select(_ => new long[26])
-                .ToArray();
-
-            var lastHeldDate = Enumerable.Range(0, 26)
-                .Select(_ => -1)
-                .ToArray();
-
-            for (var i = 0; i < input.s.Length; i++)
-            {
-                // 今日のスコアの元
-
-                var todayScoreBase = lastHeldDate
-                    .Select((item, index) => (item, index))
-                    .Select(x => (i - x.item, x.index))
-                    .Select(x => -1 * x.Item1 * input.c[x.index])
-                    .ToArray();
-
-                var todaySum = todayScoreBase.Sum();
-                var todayS = input.s[i];
-
-                var maxScore = long.MinValue;
-                var selectedType = 0;
-
-                // Greedyにやる。26種類それぞれためして、一番スコアが高くなる種別を選ぶ。
-                for (int j = 0; j < 26; j++)
-                {
-                    var v = todaySum + (-1 * todayScoreBase[j]);
-                    v += todayS[j];
-
-                    if (maxScore <= v)
-                    {
-                        selectedType = j;
-                        maxScore = v;
-                    }
-                }
-                
-                // その日選んだものを保存。
-                ansList.Add(selectedType);
-                
-                // 最後の開催日データを更新
-                lastHeldDate[selectedType] = i;
-            }
-            
-            // ansListを1-indexedな日付に変更
-
-            ansList = ansList.Select(x => x + 1).ToList();
-
-
+        public static void ValidateAnsArray(Input input, int[] ansList)
+        {
             // 返却前に一応値チェックしておく。
             if (ansList.Any(x => (x < 1 || 26 < x)))
             {
                 throw new Exception("contest type error.");
             }
 
-            if (ansList.Count != input.d)
+            if (ansList.Length != input.d)
             {
                 throw new Exception("anser length error.");
             }
+        }
 
-            return ansList.ToArray();
+        public class EditorialGreedySolver : ISolver
+        {
+            public int[] Solve(Input input)
+            {
+                var ansList = new List<int>();
+
+                for (int day = 0; day < input.d; day++)
+                {
+                    var currentMaxScore = long.MinValue;
+                    var bestContestType = 0;
+
+                    for (int type = 0; type < 26; type++)
+                    {
+                        ansList.Add(type);
+
+                        var score = CalculateScoreSum(input, ansList.Select(x => x + 1).ToArray());
+
+                        if (currentMaxScore < score)
+                        {
+                            currentMaxScore = score;
+                            bestContestType = type;
+                        }
+
+                        ansList.RemoveAt(ansList.Count - 1);
+                    }
+
+                    ansList.Add(bestContestType);
+                }
+
+
+                var ret = ansList.Select(x => x + 1).ToArray();
+
+                ValidateAnsArray(input, ret);
+                return ret;
+            }
+        }
+
+
+        public class SimpleGreedySolver : ISolver
+        {
+            public int[] Solve(Input input)
+            {
+                var ansList = new List<int>();
+
+                // 1日目からd日目まで、計算
+                var scoreHistory = Enumerable.Range(0, input.d)
+                    .Select(_ => new long[26])
+                    .ToArray();
+
+                var lastHeldDate = Enumerable.Range(0, 26)
+                    .Select(_ => -1)
+                    .ToArray();
+
+                for (var i = 0; i < input.s.Length; i++)
+                {
+                    // 今日のスコアの元
+
+                    var todayScoreBase = lastHeldDate
+                        .Select((item, index) => (item, index))
+                        .Select(x => (i - x.item, x.index))
+                        .Select(x => -1 * x.Item1 * input.c[x.index])
+                        .ToArray();
+
+                    var todaySum = todayScoreBase.Sum();
+                    var todayS = input.s[i];
+
+                    var maxScore = long.MinValue;
+                    var selectedType = 0;
+
+                    // Greedyにやる。26種類それぞれためして、一番スコアが高くなる種別を選ぶ。
+                    for (int j = 0; j < 26; j++)
+                    {
+                        var v = todaySum + (-1 * todayScoreBase[j]);
+                        v += todayS[j];
+
+                        if (maxScore <= v)
+                        {
+                            selectedType = j;
+                            maxScore = v;
+                        }
+                    }
+
+                    // その日選んだものを保存。
+                    ansList.Add(selectedType);
+
+                    // 最後の開催日データを更新
+                    lastHeldDate[selectedType] = i;
+                }
+
+                // ansListを1-indexedな日付に変更
+
+                ansList = ansList.Select(x => x + 1).ToList();
+
+
+                // 返却前に一応値チェックしておく。
+                if (ansList.Any(x => (x < 1 || 26 < x)))
+                {
+                    throw new Exception("contest type error.");
+                }
+
+                if (ansList.Count != input.d)
+                {
+                    throw new Exception("anser length error.");
+                }
+
+                return ansList.ToArray();
+            }
         }
 
         public struct Input
@@ -140,65 +201,30 @@ namespace AHC_Intro
 
         public static long CalculateScoreSum(Input input, int[] answerList)
         {
-            // var contestHistory = Enumerable.Range(0, 26)
-            //     .Select(x => new List<int>() {0})
-            //     .ToArray();
-            //
-            // for (var i = 0; i < answerList.Length; i++)
-            // {
-            //     var todayContest = answerList[i];
-            //     contestHistory[todayContest].Add(i + 1);
-            // }
-
-            // 0-indexな日付に変更
+            // 扱いやすいように0-indexな日付に変更
             var contestHistoryAns = answerList.Select(x => x - 1).ToArray();
-
-            // 1日目からd日目まで、計算
-            var scoreHistory = Enumerable.Range(0, input.d)
-                .Select(_ => new long[26])
-                .ToArray();
 
             // 最後に開催された日付け。随時更新。
             var contestLastHeld = Enumerable.Range(0, 26).Select(_ => -1).ToArray();
 
             var currentScore = 0L;
-            for (int i = 0; i < input.d; i++)
+            
+            for (int days = 0; days < answerList.Length; days++)
             {
-                var contestType = contestHistoryAns[i];
+                var contestType = contestHistoryAns[days];
+                contestLastHeld[contestType] = days;
 
-                var array = contestLastHeld
-                    .Select((item, index) => (item, index))
-                    .Select(x => (i - x.item, x.index))
-                    .Select(x => -1 * x.Item1 * input.c[x.index])
-                    .ToArray();
-
-                array[contestType] = input.s[i][contestType];
-
-                // なにかに使うかもしれないので、点数推移を持っておく。
-                for (var i1 = 0; i1 < array.Length; i1++)
+                for (int i = 0; i < 26; i++)
                 {
-                    scoreHistory[i][i1] = array[i1];
+                    currentScore -= input.c[i] * (days - contestLastHeld[i]);
                 }
 
-                currentScore += array.Sum();
+                currentScore += input.s[days][contestType];
 
-                // 出力
-                Console.WriteLine(currentScore);
-
-                // 最後に開催された日付を更新
-                contestLastHeld[contestType] = i;
             }
 
-            // 最終スコアを返す。
-            var lastSum = scoreHistory.Select(x => x.Sum())
-                .Sum();
-
-
-            Debug.WriteLine($"[DEBUG] ### Last Score : {lastSum} ### ");
-            Console.WriteLine($"[DEBUG] ### Last Score : {lastSum} ### ");
-
-            // 返却するのは、0かlastSumか
-            return Math.Max(0, lastSum);
+            Debug.WriteLine($"[DEBUG] ### Last Score : {currentScore} ### ");
+            return currentScore;
         }
 
 
